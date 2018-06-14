@@ -65,7 +65,7 @@ class Manifest(object):
         except NoOptionError:
             default_target = None
 
-        print modules
+        print "Reading modules: %s" % ", ".join(modules)
         #add modules
         files = []
         for module in modules:
