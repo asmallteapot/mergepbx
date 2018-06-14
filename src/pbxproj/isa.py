@@ -50,6 +50,13 @@ class AbstractPBXBuildPhase(PBXISADictionaryBound):
             else:
                 return "(null)"
 
+class PBXAggregateTarget(PBXISA, PBXISADictionaryBound):
+    def __init__(self, *args, **kwargs):
+        super(PBXAggregateTarget, self).__init__(*args, **kwargs)
+
+    def get_name(self, project):
+        return self.name
+
 class PBXCopyFilesBuildPhase(AbstractPBXBuildPhase, PBXISA):
     pass
 
