@@ -266,6 +266,9 @@ class _AbstractTargetMerger3(_SimpleDictMerger3):
     merge_dependencies = create_auto_merge_set("dependencies", optional = True)
     merge_files = create_auto_merge_set("files", optional = True)
 
+class PBXAggregateTargetMerger3(_AbstractTargetMerger3):
+    pass
+
 class PBXFrameworksBuildPhaseMerger3(_AbstractTargetMerger3):
     pass
 
