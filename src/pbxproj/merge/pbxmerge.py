@@ -118,7 +118,8 @@ def create_auto_merge_dict(attribute, optional = False):
         values_diff = diff3_dict(values.base, values.mine, values.theirs)
 
         if len(values_diff.conflicting) > 0:
-            raise MergeException("[create_auto_merge_dict] can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
+            possible_conflicts = [diff3_dict(values.base[key], values.mine[key], values.theirs[key]) for key in values_diff.conflicting]
+            raise MergeException("[create_auto_merge_dict] can't merge attribute '%s' - conflicts: %r" % (attribute, conflicts))
         result[attribute] = merge_ordered_dict(values_diff, values.base, values.mine, values.theirs)
 
         return result
