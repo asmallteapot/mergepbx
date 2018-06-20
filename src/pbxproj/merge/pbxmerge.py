@@ -118,7 +118,7 @@ def create_auto_merge_dict(attribute, optional = False):
         values_diff = diff3_dict(values.base, values.mine, values.theirs)
 
         if len(values_diff.conflicting) > 0:
-            raise MergeException("can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
+            raise MergeException("[create_auto_merge_dict] can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
         result[attribute] = merge_ordered_dict(values_diff, values.base, values.mine, values.theirs)
 
         return result
@@ -151,9 +151,9 @@ class PBXProjectFileMerger3(Merger):
     def merge_archiveVersion(self, result, base, mine, theirs):
         archiveVersion = _get_3("archiveVersion", base, mine, theirs)
         if not archiveVersion.base == archiveVersion.mine or not archiveVersion.base == archiveVersion.theirs:
-            raise MergeException("can not merge projects with different archiveVersion")
+            raise MergeException("[merge_archiveVersion] can not merge projects with different archiveVersion")
         if not int(archiveVersion.base) in self.SUPPORTED_ARCHIVE_VERSIONS:
-            raise MergeException("can not merge projects with archiveVersion %s" % archiveVersion.base)
+            raise MergeException("[merge_archiveVersion] can not merge projects with archiveVersion %s" % archiveVersion.base)
 
         result["archiveVersion"] = archiveVersion.base
 
@@ -163,14 +163,14 @@ class PBXProjectFileMerger3(Merger):
         if tuple(len(d) for d in classes) == (0,0,0):
             result["classes"] = {}
         else:
-            raise MergeException("merging classes in pbxproj not supported")
+            raise MergeException("[merge_classes] merging classes in pbxproj not supported")
 
     def merge_objectVersion(self, result, base, mine, theirs):
         objectVersion = _get_3("objectVersion", base, mine, theirs)
         if not objectVersion.base == objectVersion.mine or not objectVersion.base == objectVersion.theirs:
-            raise MergeException("can not merge projects with different objectVersion")
+            raise MergeException("[merge_objectVersion] can not merge projects with different objectVersion")
         if not int(objectVersion.base) in self.SUPPORTED_OBJECT_VERSIONS:
-            raise MergeException("can not merge projects with objectVersion %s" % objectVersion.base)
+            raise MergeException("[merge_objectVersion] can not merge projects with objectVersion %s" % objectVersion.base)
 
         result["objectVersion"] = objectVersion.base
 
@@ -195,7 +195,7 @@ class PBXProjectFileMerger3(Merger):
             base_isa, mine_isa, theirs_isa = _get_3("isa", base_obj, mine_obj, theirs_obj)
 
             if not base_isa == mine_isa or not base_isa == theirs_isa:
-                raise MergeException("can't merge objects whose ISA has changed. %s %s, %s, %s" %(common_object_key, base_isa, mine_isa, theirs_isa))
+                raise MergeException("[merge_objects] can't merge objects whose ISA has changed. %s %s, %s, %s" %(common_object_key, base_isa, mine_isa, theirs_isa))
 
             merger_name = base_isa + "Merger3"
 
@@ -208,7 +208,7 @@ class PBXProjectFileMerger3(Merger):
 
     def merge_rootObject(self, result, base, mine, theirs):
         if mine["rootObject"] != theirs["rootObject"]:
-            raise MergeConflictException("conflict in rootObject, can't handle that")
+            raise MergeConflictException("[merge_rootObject] conflict in rootObject, can't handle that")
         else:
             result["rootObject"] = mine["rootObject"]
 
@@ -257,7 +257,7 @@ class PBXGroupMerger3(_SimpleDictMerger3):
         base_sourceTree, mine_sourceTree, theirs_sourceTree = _get_3("sourceTree", base, mine, theirs)
 
         if not base_sourceTree == mine_sourceTree or not base_sourceTree == theirs_sourceTree:
-            raise MergeException("can't merge PBXGroup whose sourceTree has changed")
+            raise MergeException("[PBXGroupMerger3] can't merge PBXGroup whose sourceTree has changed")
 
         return result
 
@@ -321,7 +321,7 @@ class XCBuildConfigurationMerger3(_SimpleDictMerger3):
                     continue
                 dict_value = value[conflict]
                 if not isinstance(dict_value, (tuple, list, set, OrderedSet)):
-                    raise MergeException("can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
+                    raise MergeException("[XCBuildConfigurationMerger3] can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
             #ok, we now can merge it with merge_ordered_set as we are sure that it is a tuple or something like that
             #and we assume that items are unique
             dict_values = Value3(values.base[conflict], values.mine[conflict], values.theirs[conflict])
