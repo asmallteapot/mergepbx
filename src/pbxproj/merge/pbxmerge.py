@@ -19,7 +19,39 @@ class MergeConflictException(Exception):
     pass
 
 class MergeException(Exception):
-    pass
+    class ConflictingAttributes(Exception):
+        pass
+
+    class UnsupportedKey(Exception):
+        def __init__(self, key):
+            self.key = key
+
+        def __str__(self):
+            return "Unable to merge key %s" % key
+
+    class UnsupportedAttributeChange(Exception):
+        def __init__(self, key, attribute, base, mine, theirs):
+            self.key = key
+            self.attribute = attribute
+            self.base = base
+            self.mine = mine
+            self.theirs = theirs
+
+        def __str__(self):
+            return """
+Unable to merge key '%s' when attribute '%s' has changed.
+base: %r
+mine: %r
+theirs: %r
+""" % (key, attribute, base, mine, theirs)
+
+    class UnsupportedBaseValue(Exception):
+        def __init__(self, key, base_value):
+            self.key = key
+            self.base_value = base_value
+
+        def __str__(self):
+            return "Unable to merge key '%s' with base value %r" % (key, base_value)
 
 class MergeStrategyManager(object):
     def __init__(self, strategies = {}, *args, **kwargs):
@@ -119,7 +151,7 @@ def create_auto_merge_dict(attribute, optional = False):
 
         if len(values_diff.conflicting) > 0:
             possible_conflicts = [diff3_dict(values.base[key], values.mine[key], values.theirs[key]) for key in values_diff.conflicting]
-            raise MergeException("[create_auto_merge_dict] can't merge attribute '%s' - conflicts: %r" % (attribute, conflicts))
+            raise MergeException.ConflictingAttributes("[create_auto_merge_dict] can't merge attribute '%s' - conflicts: %r" % (attribute, conflicts))
         result[attribute] = merge_ordered_dict(values_diff, values.base, values.mine, values.theirs)
 
         return result
@@ -152,10 +184,9 @@ class PBXProjectFileMerger3(Merger):
     def merge_archiveVersion(self, result, base, mine, theirs):
         archiveVersion = _get_3("archiveVersion", base, mine, theirs)
         if not archiveVersion.base == archiveVersion.mine or not archiveVersion.base == archiveVersion.theirs:
-            raise MergeException("[merge_archiveVersion] can not merge projects with different archiveVersion")
+            raise MergeException.UnsupportedKey("archiveVersion")
         if not int(archiveVersion.base) in self.SUPPORTED_ARCHIVE_VERSIONS:
-            raise MergeException("[merge_archiveVersion] can not merge projects with archiveVersion %s" % archiveVersion.base)
-
+            raise MergeException.UnsupportedBaseValue("archiveVersion", archiveVersion.base)
         result["archiveVersion"] = archiveVersion.base
 
     def merge_classes(self, result, base, mine, theirs):
@@ -164,15 +195,14 @@ class PBXProjectFileMerger3(Merger):
         if tuple(len(d) for d in classes) == (0,0,0):
             result["classes"] = {}
         else:
-            raise MergeException("[merge_classes] merging classes in pbxproj not supported")
+            raise MergeException.UnsupportedKey("classes")
 
     def merge_objectVersion(self, result, base, mine, theirs):
         objectVersion = _get_3("objectVersion", base, mine, theirs)
         if not objectVersion.base == objectVersion.mine or not objectVersion.base == objectVersion.theirs:
-            raise MergeException("[merge_objectVersion] can not merge projects with different objectVersion")
+            raise MergeException.UnsupportedKey("objectVersion")
         if not int(objectVersion.base) in self.SUPPORTED_OBJECT_VERSIONS:
-            raise MergeException("[merge_objectVersion] can not merge projects with objectVersion %s" % objectVersion.base)
-
+            raise MergeException.UnsupportedBaseValue("objectVersion", objectVersion.base)
         result["objectVersion"] = objectVersion.base
 
     def merge_objects(self, result, base, mine, theirs):
@@ -196,7 +226,7 @@ class PBXProjectFileMerger3(Merger):
             base_isa, mine_isa, theirs_isa = _get_3("isa", base_obj, mine_obj, theirs_obj)
 
             if not base_isa == mine_isa or not base_isa == theirs_isa:
-                raise MergeException("[merge_objects] can't merge objects whose ISA has changed. %s %s, %s, %s" %(common_object_key, base_isa, mine_isa, theirs_isa))
+                raise MergeException.UnsupportedAttributeChange(common_object_key, "isa", base_isa, mine_isa, theirs_isa)
 
             merger_name = base_isa + "Merger3"
 
@@ -256,10 +286,8 @@ class PBXGroupMerger3(_SimpleDictMerger3):
     merge_children = create_auto_merge_set("children")
     def merge_sourceTree(self, base, mine, theirs, result, diff3):
         base_sourceTree, mine_sourceTree, theirs_sourceTree = _get_3("sourceTree", base, mine, theirs)
-
         if not base_sourceTree == mine_sourceTree or not base_sourceTree == theirs_sourceTree:
-            raise MergeException("[PBXGroupMerger3] can't merge PBXGroup whose sourceTree has changed")
-
+            raise MergeException.UnsupportedAttributeChange("PBXGroup", "sourceTree", base_sourceTree, mine_sourceTree, theirs_sourceTree)
         return result
 
 class _AbstractTargetMerger3(_SimpleDictMerger3):
@@ -322,7 +350,7 @@ class XCBuildConfigurationMerger3(_SimpleDictMerger3):
                     continue
                 dict_value = value[conflict]
                 if not isinstance(dict_value, (tuple, list, set, OrderedSet)):
-                    raise MergeException("[XCBuildConfigurationMerger3] can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
+                    raise MergeException.ConflictingAttributes("[XCBuildConfigurationMerger3] can't merge %s, conflicting values in dictionary: %r" % (attribute, values_diff.conflicting))
             #ok, we now can merge it with merge_ordered_set as we are sure that it is a tuple or something like that
             #and we assume that items are unique
             dict_values = Value3(values.base[conflict], values.mine[conflict], values.theirs[conflict])
